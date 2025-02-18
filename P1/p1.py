@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 from scipy import stats
+from scipy.stats import chi2_contingency
 
 # Set the working directory
 dir_name = '/Users/jacktorres/Dropbox/Mac/Desktop/B DATA 200/p1'
@@ -91,7 +92,30 @@ elif abs(r_value) > 0.4:
 else:
     print("Weak or no correlation between total headcount and number of doctorate recipients.")
 
+ipeds_df.rename(columns={'TRIBAL (HD2023)': 'tribal', 'DEGGRANT (HD2023)': 'degree_granting'}, inplace=True)
 
+# Convert to numeric
+ipeds_df['tribal'] = pd.to_numeric(ipeds_df['tribal'], errors='coerce')
+ipeds_df['degree_granting'] = pd.to_numeric(ipeds_df['degree_granting'], errors='coerce')
+
+# Create contingency table
+contingency_table = pd.crosstab(ipeds_df['tribal'], ipeds_df['degree_granting'])
+
+# Perform Chi-Squared Test
+chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+
+# Print results
+print("Chi-Squared Statistic:", chi2_stat)
+print("P-value:", p_value)
+print("Degrees of Freedom:", dof)
+print("Expected Frequencies Table:\n", expected)
+
+# Interpretation
+alpha = 0.05
+if p_value < alpha:
+    print("Reject the null hypothesis: Tribal College status is associated with Degree-Granting Status.")
+else:
+    print("Fail to reject the null hypothesis: Tribal College status is independent of Degree-Granting Status.")
 
 
 
