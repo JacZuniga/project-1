@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import chi2_contingency
+from scipy.stats import chi2_contingency, ttest_ind
 
 # Load the Titanic dataset
 file_path = "/Users/jacktorres/Desktop/B DATA 200/titanic.csv"
@@ -10,39 +10,52 @@ df = pd.read_csv(file_path)
 # Keep only relevant columns
 df_filtered = df[['Age', 'Sex', 'Survived']].copy()
 
-# Handle missing values by filling with median age
-df_filtered['Age'].fillna(df_filtered['Age'].median(), inplace=True)
+# Remove rows with missing Age values instead of imputing
+df_filtered = df_filtered.dropna(subset=['Age'])
 
-# Bin ages into groups for easier analysis
-age_bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-age_labels = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80-90']
-df_filtered['AgeGroup'] = pd.cut(df_filtered['Age'], bins=age_bins, labels=age_labels, right=False)
+# Define age groups
+bins = [0, 10, 20, 30, 40, 50, 60, 70, 80]
+labels = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70+']
+df_filtered['Age Group'] = pd.cut(df_filtered['Age'], bins=bins, labels=labels, right=False)
 
-# Calculate survival rates by age group and gender
-survival_rates = df_filtered.groupby(['AgeGroup', 'Sex'])['Survived'].mean().reset_index()
+# Compute survival rates by gender and age group
+survival_rates = df_filtered.groupby(['Age Group', 'Sex'])['Survived'].mean().unstack()
 
-# Set style for visualization
-sns.set_style("whitegrid")
+# Chi-Square test for gender-based survival differences
+contingency_table = pd.crosstab(df_filtered['Sex'], df_filtered['Survived'])
+chi2_stat, p_value, _, _ = chi2_contingency(contingency_table)
 
-# Create a bar plot for survival rates by age group and gender
-plt.figure(figsize=(10, 6))
-sns.barplot(x='AgeGroup', y='Survived', hue='Sex', data=survival_rates, palette=['blue', 'pink'])
+# Determine at what age male survival significantly drops
+male_data = df_filtered[df_filtered['Sex'] == 'male']
+female_data = df_filtered[df_filtered['Sex'] == 'female']
 
-# Labels and title
-plt.xlabel("Age Group", fontsize=12)
-plt.ylabel("Survival Rate", fontsize=12)
-plt.title("Survival Rate by Age Group and Gender on the Titanic", fontsize=14)
-plt.ylim(0, 1)
-plt.legend(title="Sex")
+# Perform t-test between age groups to determine statistical significance in survival differences
+age_10_20 = male_data[male_data['Age Group'] == '10-20']['Survived']
+age_20_30 = male_data[male_data['Age Group'] == '20-30']['Survived']
 
-# Show plot
+t_stat, t_p_value = ttest_ind(age_10_20, age_20_30, equal_var=False, nan_policy='omit')
+
+# Plot survival rates
+plt.figure(figsize=(10, 5))
+ax = survival_rates.plot(kind='bar', figsize=(10, 5))
+plt.title('Survival Rates by Age Group and Gender')
+plt.xlabel('Age Group')
+plt.ylabel('Survival Rate')
 plt.xticks(rotation=45)
+plt.legend(title='Sex')
+
+# Add sample size labels
+for i, age_group in enumerate(labels):
+    total_male = df_filtered[(df_filtered['Age Group'] == age_group) & (df_filtered['Sex'] == 'male')].shape[0]
+    total_female = df_filtered[(df_filtered['Age Group'] == age_group) & (df_filtered['Sex'] == 'female')].shape[0]
+    ax.text(i - 0.15, survival_rates.loc[age_group, 'male'] + 0.02, f'n={total_male}', color='blue', fontsize=10)
+    ax.text(i + 0.05, survival_rates.loc[age_group, 'female'] + 0.02, f'n={total_female}', color='red', fontsize=10)
+
 plt.show()
 
-# Perform Chi-square test on survival by gender
-contingency_table = pd.crosstab(df_filtered['Sex'], df_filtered['Survived'])
-chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
-
 # Output results
-print(f"Chi-square Statistic: {chi2_stat}")
-print(f"P-value: {p_value}")
+print(f"Chi-Square Statistic: {chi2_stat:.2f}")
+print(f"p-value: {p_value:.5f} (Extremely significant gender effect)")
+
+print(f"T-test Statistic (10-20 vs. 20-30 years): {t_stat:.2f}")
+print(f"p-value: {t_p_value:.5f} (Significance of male survival drop between 10-20 and 20-30 years)")

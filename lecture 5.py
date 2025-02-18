@@ -8,6 +8,8 @@ Created on Wed Feb  5 14:07:57 2025
 import os
 import pandas as pd
 import scipy
+import matplotlib
+import matplotlib.pyplot as plt
 
 directory_name = '/Users/jacktorres/Dropbox/Mac/Desktop/B DATA 200'
 
@@ -59,18 +61,20 @@ titanicDF['Age'].mean(skipna=True)
 discstat = titanicDF['Age'].describe(percentiles = [0.1,0.9])
 print(discstat)
 
-#scipy
-array1 = [1, 2,3]
+# lecture 6
 
-scipy.stats.ttest_ind(array1, array2, equal_var=False,
-                      nan='omit', alternative = 'less')
+matplotlib.rcParams.update({'font.size':18})
 
+plt.hist(titanicDF['Age'], bins = 10)
+plt.gca().set(title = "Ages in the Titanic Dataset", ylabel = "Count", xlabel = "Age (years)")
+plt.legend()
+plt.show()
 
-#chi square
-
-scipy.stats.chi2_contingency(observed)
-
-
-
+survivorDF = titanicDF[titanicDF["Survived"] == 1]
+diedDF = titanicDF[titanicDF["Survived"] == 0]
+plt.hist(survivorDF["Age"], bins = 10, color = 'g', label = 'Survivor', alpha = 0.5, density = True)
+plt.hist(diedDDF["Age"], bins = 10, color = 'b', label = 'Died', alpha = 0.5, density = True)
+plt.gca().set(title = "Ages in the Titanic Dataset", xlabel = "Age (years)")
+plt.show()
 
 
